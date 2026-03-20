@@ -3,7 +3,7 @@
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.19108690.svg)](https://doi.org/10.5281/zenodo.19108690)
 
 Data and interactive visualisation tool associated with the article
-> P. Chantelot, S. Croquette and F. Lemoult, Guided elastic waves informed material modelling of soft incompressible media [xx.xxxxx/arXiv.xxxx.xxxxx](https://doi.org/xx.xxxxx/arXiv.xxxx.xxxxx) (2026).
+> P. Chantelot, S. Croquette and F. Lemoult, Guided elastic waves informed material modelling of soft incompressible media [10.48550/arXiv.2603.18839](https://doi.org/10.48550/arXiv.2603.18839) (2026).
 
 The provided scripts allow to reproduce the fit procedures and the figures presented in the article.
 
