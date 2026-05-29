@@ -1,5 +1,6 @@
 using POnG
 using UnPack, FileIO
+using LsqFit, Distributions
 
 @. MR(x, p) = 1 / 2 * p[1] .+ 1 / 2 * x * p[2]
 @. GT(x, p) = p[1] / 2 + x * p[2] * 3 / 2
@@ -137,4 +138,13 @@ function getSHSvelocities(datapar, dataperp, f)
     end
 
     return VSHpar, VSpar, VSHperp, VSperp
+end
+
+function fit_error(fitresult, α)
+
+    err = stderror(fitresult) .* sqrt.(mse(fitresult)) 
+    dist = TDist(dof(fitresult)) 
+    critical_values = quantile(dist, Float64(1 - α / 2))
+    return err .* critical_values
+    
 end

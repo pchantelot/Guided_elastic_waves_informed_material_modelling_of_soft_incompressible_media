@@ -1,8 +1,9 @@
 #%% Save all parameters useful to plot figures in one place 
 using MAT, FileIO, UnPack, NaturalSort
-using LsqFit, CMAEvolutionStrategy
+using LsqFit, CMAEvolutionStrategy, Distributions
 using POnG
 include("helper_func.jl")
+α = 0.1 # for 90% confidence interval
 
 #%% Load traction test data
 data = matread(joinpath(@__DIR__, "data_Alex/Ecoflex30_RubanMax.mat"))
@@ -27,29 +28,37 @@ VSHpar, VSpar, VSHperp, VSperp = getSHSvelocities(datapar, dataperp, fip)
 fittarget = vcat(VSHpar[λA.<λc], VSpar[λA.<λc], VSHperp[λA.<λc], VSperp[λA.<λc],) ./ sqrt(μA / ρs)
 # Perform fits
 MRfit = curve_fit(MR, 1 ./ lbd[lbd.<λc][st:end], MP[lbd.<λc][st:end], 1 ./ MP[lbd.<λc][st:end] .^ 2, [10e3, 10e3])
+# Compute error on fit parameter with 90% confidence interval
+MRerror = fit_error(MRfit, α)
+
 function fMR(λ, p)
     CMRip = C_MR.(λ, λ .^ (-0.41), ρs, VL, MRfit.param[1], MRfit.param[2], fip, τ, n, p[1])
     VSHpart, VSHperpt, VSpart, VSperpt = lw_mode_velocity(λ, ρs, CMRip)
     return vcat(real(VSHpart), real(VSpart), real(VSHperpt), real(VSperpt)) ./ sqrt(sum(MRfit.param) / ρs)
 end
 βMR = curve_fit(fMR, λA[λA.<λc], fittarget, 1 ./ fittarget .^ 2, [0.5], lower=[0.0])
+βMRerror = fit_error(βMR, α)
 
 GTfit = curve_fit(GT, 1 ./ (2 * lbd[lbd.<λc][st:end] .^ 2 .+ 1 ./ lbd[lbd.<λc][st:end]),
     MP[lbd.<λc][st:end], 1 ./ MP[lbd.<λc][st:end] .^ 2, [10e3, 1e3])
+GTerror = fit_error(GTfit, α)
 function fGT(λ, p)
     CGTip = C_GT.(λ, λ .^ (-0.41), ρs, VL, GTfit.param[1], GTfit.param[2], fip, τ, n, p[1])
     VSHpart, VSHperpt, VSpart, VSperpt = lw_mode_velocity(λ, ρs, CGTip)
     return vcat(real(VSHpart), real(VSpart), real(VSHperpt), real(VSperpt)) ./ sqrt(sum(GTfit.param) / ρs)
 end
 βGT = curve_fit(fGT, λA[λA.<λc], fittarget, 1 ./ fittarget .^ 2, [0.5], lower=[0.0])
+βGTerror = fit_error(βGT, α)
 
 Cfit = curve_fit(C, 1 ./ (lbd[lbd.<λc][st:end] .* sqrt.(2 * lbd[lbd.<λc][st:end] .+ 1 ./ lbd[lbd.<λc][st:end] .^ 2)), MP[lbd.<λc][st:end], 1 ./ MP[lbd.<λc][st:end] .^ 2, [10e3, 1e3])
+Cerror = fit_error(Cfit, α)
 function fC(λ, p)
     CCip = C_C.(λ, λ .^ (-0.41), ρs, VL, Cfit.param[1], Cfit.param[2], fip, τ, n, p[1])
     VSHpart, VSHperpt, VSpart, VSperpt = lw_mode_velocity(λ, ρs, CCip)
     return vcat(real(VSHpart), real(VSpart), real(VSHperpt), real(VSperpt)) ./ sqrt(sum(Cfit.param) / ρs)
 end
 βC = curve_fit(fC, λA[λA.<λc], fittarget, 1 ./ fittarget .^ 2, [0.5], lower=[0.0])
+βCerror = fit_error(βC, α)
 
 #%% Strain hardening regime
 λc2 = 2.5 # qualitative input 
@@ -70,6 +79,7 @@ function fMRSH(λ, p)
     return vcat(real(VSHpart), real(VSpart), real(VSHperpt), real(VSperpt)) ./ sqrt(sum(MRSHfit[1:3]) / ρs)
 end
 βMRSH = curve_fit(fMRSH, λA[λA.<λc2], fittarget, 1 ./ fittarget .^ 2, [0.5], lower=[0.0])
+βMRSHerror = fit_error(βMRSH, α)
 
 error = Vector{Float64}()
 fitresults = Array{Float64,2}(undef, length(nrange), 3)
@@ -86,6 +96,7 @@ function fGTSH(λ, p)
     return vcat(real(VSHpart), real(VSpart), real(VSHperpt), real(VSperpt)) ./ sqrt(sum(GTSHfit[1:3]) / ρs)
 end
 βGTSH = curve_fit(fGTSH, λA[λA.<λc2], fittarget, 1 ./ fittarget .^ 2, [0.5], lower=[0.0])
+βGTSHerror = fit_error(βGTSH, α)
 
 error = Vector{Float64}()
 fitresults = Array{Float64,2}(undef, length(nrange), 3)
@@ -102,11 +113,15 @@ function fCSH(λ, p)
     return vcat(real(VSHpart), real(VSpart), real(VSHperpt), real(VSperpt)) ./ sqrt(sum(CSHfit[1:3]) / ρs)
 end
 βCSH = curve_fit(fCSH, λA[λA.<λc2], fittarget, 1 ./ fittarget .^ 2, [0.5], lower=[0.0])
+βCSHerror = fit_error(βCSH, α)
 
 # %% Limiting-chain regime
 fittarget = vcat(VSHpar, VSpar, VSHperp, VSperp) ./ sqrt(μA / ρs)
 fGMR(p) = sum((GMR(lbd[st:end], p) ./ MP[st:end] .- 1) .^ 2)
 globalGMR = minimize(fGMR, [MRfit.param[1], MRfit.param[2], 10], 1e3, lower=[0.0, 0.0, 1.0], upper=[23e3, 23e3, 100])
+GMRfit = curve_fit(GMR, lbd[st:end], MP[st:end], 1 ./ MP[st:end].^2, population_mean(globalGMR))
+GMRerror = fit_error(GMRfit, α)
+
 function f2GMR(λ, p)
     CGMRip = C_GMR.(λ, λ .^ (-0.41), ρs, VL, population_mean(globalGMR)[1], population_mean(globalGMR)[2],
         population_mean(globalGMR)[3], fip, τ, n, p[1])
@@ -114,9 +129,13 @@ function f2GMR(λ, p)
     return vcat(real(VSHpart), real(VSpart), real(VSHperpt), real(VSperpt)) ./ sqrt(sum(population_mean(globalGMR)[1:2]) / ρs)
 end
 βGMR = curve_fit(f2GMR, λA, fittarget, 1 ./ fittarget .^ 2, [0.5], lower=[0.0])
+βGMRerror = fit_error(βGMR, α)
 
 fGG(p) = sum((GG(lbd[st:end], p) ./ MP[st:end] .- 1) .^ 2)
 globalGG = minimize(fGG, [GTfit.param[1], GTfit.param[2], 10], 1e3, lower=[0.0, 0.0, 1.0], upper=[23e3, 23e3, 100])
+GGfit = curve_fit(GG, lbd[st:end], MP[st:end], 1 ./ MP[st:end].^2, population_mean(globalGG))
+GGerror = fit_error(GGfit, α)
+
 function f2GG(λ, p)
     CGGip = C_GG.(λ, λ .^ (-0.41), ρs, VL, population_mean(globalGG)[1], population_mean(globalGG)[2],
         population_mean(globalGG)[3], fip, τ, n, p[1])
@@ -124,6 +143,7 @@ function f2GG(λ, p)
     return vcat(real(VSHpart), real(VSpart), real(VSHperpt), real(VSperpt)) ./ sqrt(sum(population_mean(globalGG)[1:2]) / ρs)
 end
 βGG = curve_fit(f2GG, λA, fittarget, 1 ./ fittarget .^ 2, [0.5], lower=[0.0])
+βGGerror = fit_error(βGG, α)
 
 fDCMR(p) = sum((DCMR(lbd[st:end], p) ./ MP[st:end] .- 1) .^ 2)
 globalDCMR = minimize(fDCMR, [MRfit.param[1], MRfit.param[2], 10], 1e3, lower=[0.0, 0.0, 1.0], upper=[23e3, 23e3, 100])
@@ -147,14 +167,14 @@ end
 βDCGT = curve_fit(f2DCGT, λA, fittarget, 1 ./ fittarget .^ 2, [0.5], lower=[0.0])
 
 # %%
-save(joinpath(@__DIR__, "fitparameters.jld2"),
-    "MRfit", MRfit.param, "βMR", βMR.param,
-    "GTfit", GTfit.param, "βGT", βGT.param,
-    "Cfit", Cfit.param, "βC", βC.param,
-    "MRSHfit", MRSHfit, "βMRSH", βMRSH.param,
-    "GTSHfit", GTSHfit, "βGTSH", βGTSH.param,
-    "CSHfit", CSHfit, "βCSH", βCSH.param,
-    "GGfit", population_mean(globalGG), "βGG", βGG.param,
-    "GMRfit", population_mean(globalGMR), "βGMR", βGMR.param,
-    "DCMRfit", population_mean(globalDCMR), "βDCMR", βDCMR.param,
-    "DCGTfit", population_mean(globalDCGT), "βDCGT", βDCGT.param)
+# save(joinpath(@__DIR__, "fitparameters.jld2"),
+#     "MRfit", MRfit.param, "βMR", βMR.param,
+#     "GTfit", GTfit.param, "βGT", βGT.param,
+#     "Cfit", Cfit.param, "βC", βC.param,
+#     "MRSHfit", MRSHfit, "βMRSH", βMRSH.param,
+#     "GTSHfit", GTSHfit, "βGTSH", βGTSH.param,
+#     "CSHfit", CSHfit, "βCSH", βCSH.param,
+#     "GGfit", population_mean(globalGG), "βGG", βGG.param,
+#     "GMRfit", population_mean(globalGMR), "βGMR", βGMR.param,
+#     "DCMRfit", population_mean(globalDCMR), "βDCMR", βDCMR.param,
+#     "DCGTfit", population_mean(globalDCGT), "βDCGT", βDCGT.param)
