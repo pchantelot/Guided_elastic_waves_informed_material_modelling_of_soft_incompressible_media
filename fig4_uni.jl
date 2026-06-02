@@ -60,28 +60,28 @@ for l in lbdmax
 end
 
 #%% Get velocity for the A0 perp mode which is not well described by a long-wavelength approximation
-simu = filter(x -> occursin("MR", x), readdir(joinpath(@__DIR__, "fig4")))
+simu = filter(x -> occursin("MR", x), readdir(joinpath(@__DIR__, "fig4_uni")))
 VSMR = Vector{Float64}()
 λS = Vector{Float32}()
 for name in simu
-    local data = load(joinpath(@__DIR__, "fig4", name))
+    local data = load(joinpath(@__DIR__, "fig4_uni", name))
     @unpack k, f = data
     _, idx = findmin(abs.(f .- fop))
     append!(VSMR, real(2 * pi * f[idx] / k[idx]))
     append!(λS, parse(Float32, name[end-7:end-5]))
 end
-simu = filter(x -> occursin("GT", x), readdir(joinpath(@__DIR__, "fig4")))
+simu = filter(x -> occursin("GT", x), readdir(joinpath(@__DIR__, "fig4_uni")))
 VSGT = Vector{Float64}()
 for name in simu
-    local data = load(joinpath(@__DIR__, "fig4", name))
+    local data = load(joinpath(@__DIR__, "fig4_uni", name))
     @unpack k, f = data
     _, idx = findmin(abs.(f .- fop))
     append!(VSGT, real(2 * pi * f[idx] / k[idx]))
 end
-simu = filter(x -> occursin("C", x), readdir(joinpath(@__DIR__, "fig4")))
+simu = filter(x -> occursin("C", x), readdir(joinpath(@__DIR__, "fig4_uni")))
 VSC = Vector{Float64}()
 for name in simu
-    local data = load(joinpath(@__DIR__, "fig4", name))
+    local data = load(joinpath(@__DIR__, "fig4_uni", name))
     @unpack k, f = data
     _, idx = findmin(abs.(f .- fop))
     append!(VSC, real(2 * pi * f[idx] / k[idx]))
@@ -207,7 +207,7 @@ with_theme(My_theme, palette=(color=ColorSchemes.Set1_3, marker=[:circle])) do
     rowgap!(fig.layout, 0)
     colsize!(fig.layout, 2, Relative(7 / 10))
     display(fig)
-    save(joinpath(@__DIR__, "figure4_uniaxial.pdf"), fig; pt_per_unit=1.0)
+    save(joinpath(@__DIR__,"fig4_uni", "figure4_uniaxial.pdf"), fig; pt_per_unit=1.0)
 
 end
 

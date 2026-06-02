@@ -39,39 +39,39 @@ MP = sig ./ (2 * (lbd .- lbd .^ (-2)))
 st = 2000
 
 # %% Get simulation results
-simu = filter(x -> occursin("MRSH1", x), readdir(joinpath(@__DIR__, "fig5")))
+simu = filter(x -> occursin("MRSH1", x), readdir(joinpath(@__DIR__, "fig5_uni")))
 VSMRSH1 = Vector{Float64}()
 λS = Vector{Float32}()
 for name in simu
-    data = load(joinpath(@__DIR__, "fig5", name))
+    data = load(joinpath(@__DIR__, "fig5_uni", name))
     @unpack k, f = data
     _, idx = findmin(abs.(f .- fop))
     append!(VSMRSH1, real(2 * pi * f[idx] / k[idx]))
     append!(λS, parse(Float32, name[end-7:end-5]))
 end
 
-simu = filter(x -> occursin("GTSH1", x), readdir(joinpath(@__DIR__, "fig5")))
+simu = filter(x -> occursin("GTSH1", x), readdir(joinpath(@__DIR__, "fig5_uni")))
 VSGTSH = Vector{Float64}()
 for name in simu
-    data = load(joinpath(@__DIR__, "fig5", name))
+    data = load(joinpath(@__DIR__, "fig5_uni", name))
     @unpack k, f = data
     _, idx = findmin(abs.(f .- fop))
     append!(VSGTSH, real(2 * pi * f[idx] / k[idx]))
 end
 
-simu = filter(x -> occursin("CSH", x), readdir(joinpath(@__DIR__, "fig5")))
+simu = filter(x -> occursin("CSH", x), readdir(joinpath(@__DIR__, "fig5_uni")))
 VSCSH = Vector{Float64}()
 for name in simu
-    data = load(joinpath(@__DIR__, "fig5", name))
+    data = load(joinpath(@__DIR__, "fig5_uni", name))
     @unpack k, f = data
     _, idx = findmin(abs.(f .- fop))
     append!(VSCSH, real(2 * pi * f[idx] / k[idx]))
 end
 
-simu = filter(x -> occursin("MR", x), readdir(joinpath(@__DIR__, "fig4")))
+simu = filter(x -> occursin("MR", x), readdir(joinpath(@__DIR__, "fig4_uni")))
 VSMR = Vector{Float64}()
 for name in simu
-    data = load(joinpath(@__DIR__, "fig4", name))
+    data = load(joinpath(@__DIR__, "fig4_uni", name))
     @unpack k, f = data
     _, idx = findmin(abs.(f .- fop))
     append!(VSMR, real(2 * pi * f[idx] / k[idx]))
