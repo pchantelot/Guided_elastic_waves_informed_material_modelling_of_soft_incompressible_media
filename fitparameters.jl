@@ -3,7 +3,7 @@ using MAT, FileIO, UnPack, NaturalSort
 using LsqFit, CMAEvolutionStrategy, Distributions
 using POnG
 include("helper_func.jl")
-α = 0.1 # for 90% confidence interval
+α = 0.05 # for 95% confidence interval
 
 #%% Load traction test data
 data = matread(joinpath(@__DIR__, "data_Alex/Ecoflex30_RubanMax.mat"))
@@ -198,9 +198,9 @@ save(joinpath(@__DIR__, "fitparameters.jld2"),
     "MRfit", MRfit.param, "βMR", βMR.param, "βMRerror", βMRerror,
     "GTfit", GTfit.param, "βGT", βGT.param, "βGTerror", βGTerror,
     "Cfit", Cfit.param, "βC", βC.param, "βCerror", βCerror,
-    "MRSHfit", MRSHfit, "βMRSH", βMRSH.param, "βMRSHerror", βMRSHerror,
-    "GTSHfit", GTSHfit, "βGTSH", βGTSH.param, "βGTSHerror", βGTSHerror,
-    "CSHfit", CSHfit, "βCSH", βCSH.param, "βCSHerror", βCSHerror,
+    "MRSHfit", MRSHfit.param, "βMRSH", βMRSH.param, "βMRSHerror", βMRSHerror,
+    "GTSHfit", GTSHfit.param, "βGTSH", βGTSH.param, "βGTSHerror", βGTSHerror,
+    "CSHfit", CSHfit.param, "βCSH", βCSH.param, "βCSHerror", βCSHerror,
     "GGfit", population_mean(globalGG), "βGG", βGG.param, "βGGerror", βGGerror,
     "GMRfit", population_mean(globalGMR), "βGMR", βGMR.param, "βGMRerror", βGMRerror,
     "DCMRfit", population_mean(globalDCMR), "βDCMR", βDCMR.param, "βDCMRerror", βDCMRerror,

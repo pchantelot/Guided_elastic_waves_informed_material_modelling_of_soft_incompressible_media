@@ -27,7 +27,7 @@ VSHpar, VSpar, VSHperp, VSperp = getSHSvelocities(datapar, dataperp, fip)
 # %% Define engineering stress for the W considered in the small to moderate strain regime
 # Load fit parameters
 data = load(joinpath(@__DIR__, "fitparameters.jld2"))
-@unpack MRfit, GTfit, Cfit, βMR, βGT, βC = data
+@unpack MRfit, GTfit, Cfit, βMR, βGT, βC, βMRerror, βGTerror, βCerror = data
 # This figure requires to compute the maximum relative error
 # Load traction test data
 data = matread(joinpath(@__DIR__, "data_Alex/Ecoflex30_RubanMax.mat"))

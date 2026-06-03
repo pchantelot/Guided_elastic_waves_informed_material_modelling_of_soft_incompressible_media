@@ -27,7 +27,7 @@ VSHpar, VSpar, VSHperp, VSperp = getSHSvelocities(datapar, dataperp, fip)
 # %% Define engineering stress for the W considered in the small to moderate strain regime
 # Load fit parameters
 data = load(joinpath(@__DIR__, "fitparameters.jld2"))
-@unpack GTSHfit, βGTSH, GGfit, βGG, DCGTfit, βDCGT = data
+@unpack GTSHfit, βGTSH, GGfit, βGG, DCGTfit, βDCGT, βGGerror, βDCGTerror = data
 # This figure requires to compute the maximum relative error
 # Load traction test data
 data = matread(joinpath(@__DIR__, "data_Alex/Ecoflex30_RubanMax.mat"))
@@ -43,7 +43,7 @@ simu = filter(x -> occursin("GTSH1", x), readdir(joinpath(@__DIR__, "fig5")))
 VSGTSH1 = Vector{Float64}()
 λS = Vector{Float32}()
 for name in simu
-    data = load(joinpath(@__DIR__, "fig5", name))
+    local data = load(joinpath(@__DIR__, "fig5", name))
     @unpack k, f = data
     _, idx = findmin(abs.(f .- fop))
     append!(VSGTSH1, real(2 * pi * f[idx] / k[idx]))
@@ -52,7 +52,7 @@ end
 simu = filter(x -> occursin("GG", x), readdir(joinpath(@__DIR__, "fig6")))
 VSGG = Vector{Float64}()
 for name in simu
-    data = load(joinpath(@__DIR__, "fig6", name))
+    local data = load(joinpath(@__DIR__, "fig6", name))
     @unpack k, f = data
     _, idx = findmin(abs.(f .- fop))
     append!(VSGG, real(2 * pi * f[idx] / k[idx]))
@@ -60,7 +60,7 @@ end
 simu = filter(x -> occursin("DCGT", x), readdir(joinpath(@__DIR__, "fig6")))
 VSDCGT = Vector{Float64}()
 for name in simu
-    data = load(joinpath(@__DIR__, "fig6", name))
+    local data = load(joinpath(@__DIR__, "fig6", name))
     @unpack k, f = data
     _, idx = findmin(abs.(f .- fop))
     append!(VSDCGT, real(2 * pi * f[idx] / k[idx]))
@@ -121,18 +121,38 @@ with_theme(My_theme, palette=(color=ColorSchemes.Set1_5, marker=[:circle])) do
     lines!(ax2, λ, real(VSpart) ./ sqrt(sum(GTSHfit[1:3]) / ρs), color=:black, linestyle=:dash)
     lines!(ax3, λ, real(VSHperpt) ./ sqrt(sum(GTSHfit[1:3]) / ρs), color=:black, linestyle=:dash)
     lines!(ax3, λ, real(VSperpt) ./ sqrt(sum(GTSHfit[1:3]) / ρs), color=:black, linestyle=:dash)
+
     CGGip = C_GG.(λ, λ .^ (-0.41), ρs, VL, GGfit[1], GGfit[2], GGfit[3], fip, τ, n, βGG)
     VSHpart, VSHperpt, VSpart, VSperpt = lw_mode_velocity(λ, ρs, CGGip)
+    CGGipp = C_GG.(λ, λ .^ (-0.41), ρs, VL, GGfit[1], GGfit[2], GGfit[3], fip, τ, n, βGG + βGGerror)
+    VSHpartp, VSHperptp, VSpartp, VSperptp = lw_mode_velocity(λ, ρs, CGGipp)
+    CGGipm = C_GG.(λ, λ .^ (-0.41), ρs, VL, GGfit[1], GGfit[2], GGfit[3], fip, τ, n, βGG - βGGerror)
+    VSHpartm, VSHperptm, VSpartm, VSperptm = lw_mode_velocity(λ, ρs, CGGipm)
+    
     lines!(ax2, λ, real(VSHpart) ./ sqrt(sum(GGfit[1:2]) / ρs), color=ColorSchemes.Set1_3[1])
+    band!(ax2, λ, real(VSHpartp) ./ sqrt(sum(GGfit[1:2]) / ρs), real(VSHpartm) ./ sqrt(sum(GGfit[1:2]) / ρs), color=ColorSchemes.Set1_3[1], alpha = 0.5)
     lines!(ax2, λ, real(VSpart) ./ sqrt(sum(GGfit[1:2]) / ρs), color=ColorSchemes.Set1_3[1])
+    band!(ax2, λ, real(VSpartp) ./ sqrt(sum(GGfit[1:2]) / ρs), real(VSpartm) ./ sqrt(sum(GGfit[1:2]) / ρs), color=ColorSchemes.Set1_3[1], alpha = 0.5)
     lines!(ax3, λ, real(VSHperpt) ./ sqrt(sum(GGfit[1:2]) / ρs), color=ColorSchemes.Set1_3[1])
+    band!(ax3, λ, real(VSHperptp) ./ sqrt(sum(GGfit[1:2]) / ρs), real(VSHperptm) ./ sqrt(sum(GGfit[1:2]) / ρs), color=ColorSchemes.Set1_3[1], alpha = 0.5)
     lines!(ax3, λ, real(VSperpt) ./ sqrt(sum(GGfit[1:2]) / ρs), color=ColorSchemes.Set1_3[1])
+    band!(ax3, λ, real(VSperptp) ./ sqrt(sum(GGfit[1:2]) / ρs), real(VSperptm) ./ sqrt(sum(GGfit[1:2]) / ρs), color=ColorSchemes.Set1_3[1], alpha = 0.5)
+
     CDCGTip = C_DCGT.(λ, λ .^ (-0.41), ρs, VL, DCGTfit[1], DCGTfit[2], DCGTfit[3], fip, τ, n, βDCGT)
     VSHpart, VSHperpt, VSpart, VSperpt = lw_mode_velocity(λ, ρs, CDCGTip)
+    CDCGTipp = C_DCGT.(λ, λ .^ (-0.41), ρs, VL, DCGTfit[1], DCGTfit[2], DCGTfit[3], fip, τ, n, βDCGT + βDCGTerror)
+    VSHpartp, VSHperptp, VSpartp, VSperptp = lw_mode_velocity(λ, ρs, CDCGTipp)
+    CDCGTipm = C_DCGT.(λ, λ .^ (-0.41), ρs, VL, DCGTfit[1], DCGTfit[2], DCGTfit[3], fip, τ, n, βDCGT - βDCGTerror)
+    VSHpartm, VSHperptm, VSpartm, VSperptm = lw_mode_velocity(λ, ρs, CDCGTipm)
+
     lines!(ax2, λ, real(VSHpart) ./ sqrt(sum(DCGTfit[1:2]) / ρs), color=ColorSchemes.Set1_5[2], linestyle=:dash)
+    band!(ax2, λ, real(VSHpartm) ./ sqrt(sum(DCGTfit[1:2]) / ρs), real(VSHpartp) ./ sqrt(sum(DCGTfit[1:2]) / ρs), color=ColorSchemes.Set1_5[2], alpha = 0.5)
     lines!(ax2, λ, real(VSpart) ./ sqrt(sum(DCGTfit[1:2]) / ρs), color=ColorSchemes.Set1_5[2], linestyle=:dash)
+    band!(ax2, λ, real(VSpartm) ./ sqrt(sum(DCGTfit[1:2]) / ρs), real(VSpartp) ./ sqrt(sum(DCGTfit[1:2]) / ρs), color=ColorSchemes.Set1_5[2], alpha = 0.5)
     lines!(ax3, λ, real(VSHperpt) ./ sqrt(sum(DCGTfit[1:2]) / ρs), color=ColorSchemes.Set1_5[2], linestyle=:dash)
+    band!(ax3, λ, real(VSHperptm) ./ sqrt(sum(DCGTfit[1:2]) / ρs), real(VSHperptp) ./ sqrt(sum(DCGTfit[1:2]) / ρs), color=ColorSchemes.Set1_5[2], alpha = 0.5)
     lines!(ax3, λ, real(VSperpt) ./ sqrt(sum(DCGTfit[1:2]) / ρs), color=ColorSchemes.Set1_5[2], linestyle=:dash)
+    band!(ax3, λ, real(VSperptm) ./ sqrt(sum(DCGTfit[1:2]) / ρs), real(VSperptp) ./ sqrt(sum(DCGTfit[1:2]) / ρs), color=ColorSchemes.Set1_5[2], alpha = 0.5)
 
     CGTSHop = C_GTSH.(λ, λ .^ (-0.39), ρs, VL, GTSHfit[1], GTSHfit[2], GTSHfit[3], GTSHfit[4], fop, τ, n, βGTSH)
     VSHpart, VSHperpt, VSpart, VSperpt, VApart, VAperpt = lw_mode_velocity(λ, ρs, CGTSHop)
