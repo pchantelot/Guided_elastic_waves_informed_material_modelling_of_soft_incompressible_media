@@ -26,7 +26,8 @@ VSHpar, VSpar, VSHperp, VSperp = getSHSvelocities(datapar, dataperp, fip)
 #%% Fits in the  small to moderate strain regime (hyperelastic model parameters + β')
 λc = 1.5 # End of regime (determined quantitatively from error)
 fittarget = vcat(VSHpar[λA.<λc], VSpar[λA.<λc], VSHperp[λA.<λc], VSperp[λA.<λc],) ./ sqrt(μA / ρs)
-# Perform fits
+
+# Fit Mooney-Rivlin model
 MRfit = curve_fit(MR, 1 ./ lbd[lbd.<λc][st:end], MP[lbd.<λc][st:end], 1 ./ MP[lbd.<λc][st:end] .^ 2, [10e3, 10e3])
 # Compute error on fit parameter with 90% confidence interval
 MRerror = fit_error(MRfit, α)
@@ -36,34 +37,40 @@ function fMR(λ, p)
     VSHpart, VSHperpt, VSpart, VSperpt = lw_mode_velocity(λ, ρs, CMRip)
     return vcat(real(VSHpart), real(VSpart), real(VSHperpt), real(VSperpt)) ./ sqrt(sum(MRfit.param) / ρs)
 end
-βMR = curve_fit(fMR, λA[λA.<λc], fittarget, 1 ./ fittarget .^ 2, [0.5], lower=[0.0])
+βMR = curve_fit(fMR, λA[λA.<λc], fittarget, 1 ./ fittarget .^ 2, [0.5], lower=[0.0], autodiff = AutoFiniteDiff(fdjtype = Val(:central)))
 βMRerror = fit_error(βMR, α)
 
+# Fit Gent-Thomas model
 GTfit = curve_fit(GT, 1 ./ (2 * lbd[lbd.<λc][st:end] .^ 2 .+ 1 ./ lbd[lbd.<λc][st:end]),
     MP[lbd.<λc][st:end], 1 ./ MP[lbd.<λc][st:end] .^ 2, [10e3, 1e3])
 GTerror = fit_error(GTfit, α)
+
 function fGT(λ, p)
     CGTip = C_GT.(λ, λ .^ (-0.41), ρs, VL, GTfit.param[1], GTfit.param[2], fip, τ, n, p[1])
     VSHpart, VSHperpt, VSpart, VSperpt = lw_mode_velocity(λ, ρs, CGTip)
     return vcat(real(VSHpart), real(VSpart), real(VSHperpt), real(VSperpt)) ./ sqrt(sum(GTfit.param) / ρs)
 end
-βGT = curve_fit(fGT, λA[λA.<λc], fittarget, 1 ./ fittarget .^ 2, [0.5], lower=[0.0])
+βGT = curve_fit(fGT, λA[λA.<λc], fittarget, 1 ./ fittarget .^ 2, [0.5], lower=[0.0], autodiff = AutoFiniteDiff(fdjtype = Val(:central)))
 βGTerror = fit_error(βGT, α)
 
+# Fit Carroll model
 Cfit = curve_fit(C, 1 ./ (lbd[lbd.<λc][st:end] .* sqrt.(2 * lbd[lbd.<λc][st:end] .+ 1 ./ lbd[lbd.<λc][st:end] .^ 2)), MP[lbd.<λc][st:end], 1 ./ MP[lbd.<λc][st:end] .^ 2, [10e3, 1e3])
 Cerror = fit_error(Cfit, α)
+
 function fC(λ, p)
     CCip = C_C.(λ, λ .^ (-0.41), ρs, VL, Cfit.param[1], Cfit.param[2], fip, τ, n, p[1])
     VSHpart, VSHperpt, VSpart, VSperpt = lw_mode_velocity(λ, ρs, CCip)
     return vcat(real(VSHpart), real(VSpart), real(VSHperpt), real(VSperpt)) ./ sqrt(sum(Cfit.param) / ρs)
 end
-βC = curve_fit(fC, λA[λA.<λc], fittarget, 1 ./ fittarget .^ 2, [0.5], lower=[0.0])
+βC = curve_fit(fC, λA[λA.<λc], fittarget, 1 ./ fittarget .^ 2, [0.5], lower=[0.0], autodiff = AutoFiniteDiff(fdjtype = Val(:central)))
 βCerror = fit_error(βC, α)
 
 #%% Strain hardening regime
 λc2 = 2.5 # qualitative input 
 fittarget = vcat(VSHpar[λA.<λc2], VSpar[λA.<λc2], VSHperp[λA.<λc2], VSperp[λA.<λc2],) ./ sqrt(μA / ρs)
 nrange = range(1.0, 3.0, step=0.01)
+
+# Fit MRSH model
 error = Vector{Float64}()
 fitresults = Array{Float64,2}(undef, length(nrange), 3)
 for i in eachindex(nrange)
@@ -72,15 +79,18 @@ for i in eachindex(nrange)
     append!(error, sum(fit.resid .^ 2))
     fitresults[i, :] = fit.param
 end
-MRSHfit = vcat(fitresults[argmin(error), :], nrange[argmin(error)])
+MRSHfit = curve_fit(MRSH, lbd[lbd.<λc2][st:end], MP[lbd.<λc2][st:end], 1 ./ MP[lbd.<λc2][st:end] .^ 2, vcat(fitresults[argmin(error), :], nrange[argmin(error)]))
+MRSHerror = fit_error(MRSHfit, α)
+
 function fMRSH(λ, p)
-    CMRSHip = C_MRSH.(λ, λ .^ (-0.41), ρs, VL, MRSHfit[1], MRSHfit[2], MRSHfit[3], MRSHfit[4], fip, τ, n, p[1])
+    CMRSHip = C_MRSH.(λ, λ .^ (-0.41), ρs, VL, MRSHfit.param[1], MRSHfit.param[2], MRSHfit.param[3], MRSHfit.param[4], fip, τ, n, p[1])
     VSHpart, VSHperpt, VSpart, VSperpt, _, _ = lw_mode_velocity(λ, ρs, CMRSHip)
-    return vcat(real(VSHpart), real(VSpart), real(VSHperpt), real(VSperpt)) ./ sqrt(sum(MRSHfit[1:3]) / ρs)
+    return vcat(real(VSHpart), real(VSpart), real(VSHperpt), real(VSperpt)) ./ sqrt(sum(MRSHfit.param[1:3]) / ρs)
 end
-βMRSH = curve_fit(fMRSH, λA[λA.<λc2], fittarget, 1 ./ fittarget .^ 2, [0.5], lower=[0.0])
+βMRSH = curve_fit(fMRSH, λA[λA.<λc2], fittarget, 1 ./ fittarget .^ 2, [0.5], lower=[0.0], autodiff = AutoFiniteDiff(fdjtype = Val(:central)))
 βMRSHerror = fit_error(βMRSH, α)
 
+# Fit GTSH model
 error = Vector{Float64}()
 fitresults = Array{Float64,2}(undef, length(nrange), 3)
 for i in eachindex(nrange)
@@ -89,15 +99,18 @@ for i in eachindex(nrange)
     append!(error, sum(fit.resid .^ 2))
     fitresults[i, :] = fit.param
 end
-GTSHfit = vcat(fitresults[argmin(error), :], nrange[argmin(error)])
+GTSHfit = curve_fit(GTSH, lbd[lbd.<λc2][st:end], MP[lbd.<λc2][st:end], 1 ./ MP[lbd.<λc2][st:end] .^ 2, vcat(fitresults[argmin(error), :], nrange[argmin(error)]))
+GTSHerror = fit_error(GTSHfit, α)
+
 function fGTSH(λ, p)
-    CGTSHip = C_GTSH.(λ, λ .^ (-0.41), ρs, VL, GTSHfit[1], GTSHfit[2], GTSHfit[3], GTSHfit[4], fip, τ, n, p[1])
+    CGTSHip = C_GTSH.(λ, λ .^ (-0.41), ρs, VL, GTSHfit.param[1], GTSHfit.param[2], GTSHfit.param[3], GTSHfit.param[4], fip, τ, n, p[1])
     VSHpart, VSHperpt, VSpart, VSperpt = lw_mode_velocity(λ, ρs, CGTSHip)
-    return vcat(real(VSHpart), real(VSpart), real(VSHperpt), real(VSperpt)) ./ sqrt(sum(GTSHfit[1:3]) / ρs)
+    return vcat(real(VSHpart), real(VSpart), real(VSHperpt), real(VSperpt)) ./ sqrt(sum(GTSHfit.param[1:3]) / ρs)
 end
-βGTSH = curve_fit(fGTSH, λA[λA.<λc2], fittarget, 1 ./ fittarget .^ 2, [0.5], lower=[0.0])
+βGTSH = curve_fit(fGTSH, λA[λA.<λc2], fittarget, 1 ./ fittarget .^ 2, [0.5], lower=[0.0], autodiff = AutoFiniteDiff(fdjtype = Val(:central)))
 βGTSHerror = fit_error(βGTSH, α)
 
+# Fit CSH model
 error = Vector{Float64}()
 fitresults = Array{Float64,2}(undef, length(nrange), 3)
 for i in eachindex(nrange)
@@ -106,17 +119,21 @@ for i in eachindex(nrange)
     append!(error, sum(fit.resid .^ 2))
     fitresults[i, :] = fit.param
 end
-CSHfit = vcat(fitresults[argmin(error), :], nrange[argmin(error)])
+CSHfit = curve_fit(CSH, lbd[lbd.<λc2][st:end], MP[lbd.<λc2][st:end], 1 ./ MP[lbd.<λc2][st:end] .^ 2, vcat(fitresults[argmin(error), :], nrange[argmin(error)]))
+CSHerror = fit_error(CSHfit, α)
+
 function fCSH(λ, p)
-    CCSHip = C_CSH.(λ, λ .^ (-0.41), ρs, VL, CSHfit[1], CSHfit[2], CSHfit[3], CSHfit[4], fip, τ, n, p[1])
+    CCSHip = C_CSH.(λ, λ .^ (-0.41), ρs, VL, CSHfit.param[1], CSHfit.param[2], CSHfit.param[3], CSHfit.param[4], fip, τ, n, p[1])
     VSHpart, VSHperpt, VSpart, VSperpt = lw_mode_velocity(λ, ρs, CCSHip)
-    return vcat(real(VSHpart), real(VSpart), real(VSHperpt), real(VSperpt)) ./ sqrt(sum(CSHfit[1:3]) / ρs)
+    return vcat(real(VSHpart), real(VSpart), real(VSHperpt), real(VSperpt)) ./ sqrt(sum(CSHfit.param[1:3]) / ρs)
 end
-βCSH = curve_fit(fCSH, λA[λA.<λc2], fittarget, 1 ./ fittarget .^ 2, [0.5], lower=[0.0])
+βCSH = curve_fit(fCSH, λA[λA.<λc2], fittarget, 1 ./ fittarget .^ 2, [0.5], lower=[0.0], autodiff = AutoFiniteDiff(fdjtype = Val(:central)))
 βCSHerror = fit_error(βCSH, α)
 
 # %% Limiting-chain regime
 fittarget = vcat(VSHpar, VSpar, VSHperp, VSperp) ./ sqrt(μA / ρs)
+
+# Fit GMR model
 fGMR(p) = sum((GMR(lbd[st:end], p) ./ MP[st:end] .- 1) .^ 2)
 globalGMR = minimize(fGMR, [MRfit.param[1], MRfit.param[2], 10], 1e3, lower=[0.0, 0.0, 1.0], upper=[23e3, 23e3, 100])
 GMRfit = curve_fit(GMR, lbd[st:end], MP[st:end], 1 ./ MP[st:end].^2, population_mean(globalGMR))
@@ -128,9 +145,10 @@ function f2GMR(λ, p)
     VSHpart, VSHperpt, VSpart, VSperpt, _, _ = lw_mode_velocity(λ, ρs, CGMRip)
     return vcat(real(VSHpart), real(VSpart), real(VSHperpt), real(VSperpt)) ./ sqrt(sum(population_mean(globalGMR)[1:2]) / ρs)
 end
-βGMR = curve_fit(f2GMR, λA, fittarget, 1 ./ fittarget .^ 2, [0.5], lower=[0.0])
+βGMR = curve_fit(f2GMR, λA, fittarget, 1 ./ fittarget .^ 2, [0.5], lower=[0.0], autodiff = AutoFiniteDiff(fdjtype = Val(:central)))
 βGMRerror = fit_error(βGMR, α)
 
+# Fit GG model
 fGG(p) = sum((GG(lbd[st:end], p) ./ MP[st:end] .- 1) .^ 2)
 globalGG = minimize(fGG, [GTfit.param[1], GTfit.param[2], 10], 1e3, lower=[0.0, 0.0, 1.0], upper=[23e3, 23e3, 100])
 GGfit = curve_fit(GG, lbd[st:end], MP[st:end], 1 ./ MP[st:end].^2, population_mean(globalGG))
@@ -142,39 +160,48 @@ function f2GG(λ, p)
     VSHpart, VSHperpt, VSpart, VSperpt, _, _ = lw_mode_velocity(λ, ρs, CGGip)
     return vcat(real(VSHpart), real(VSpart), real(VSHperpt), real(VSperpt)) ./ sqrt(sum(population_mean(globalGG)[1:2]) / ρs)
 end
-βGG = curve_fit(f2GG, λA, fittarget, 1 ./ fittarget .^ 2, [0.5], lower=[0.0])
+βGG = curve_fit(f2GG, λA, fittarget, 1 ./ fittarget .^ 2, [0.5], lower=[0.0], autodiff = AutoFiniteDiff(fdjtype = Val(:central)))
 βGGerror = fit_error(βGG, α)
 
+# Fit DCMR model
 fDCMR(p) = sum((DCMR(lbd[st:end], p) ./ MP[st:end] .- 1) .^ 2)
 globalDCMR = minimize(fDCMR, [MRfit.param[1], MRfit.param[2], 10], 1e3, lower=[0.0, 0.0, 1.0], upper=[23e3, 23e3, 100])
+DCMRfit = curve_fit(DCMR, lbd[st:end], MP[st:end], 1 ./ MP[st:end].^2, population_mean(globalDCMR))
+DCMRerror = fit_error(DCMRfit, α)
+
 function f2DCMR(λ, p)
     CDCMRip = C_DCMR2.(λ, λ .^ (-0.41), ρs, VL, population_mean(globalDCMR)[1], population_mean(globalDCMR)[2],
         population_mean(globalDCMR)[3], fip, τ, n, p[1])
     VSHpart, VSHperpt, VSpart, VSperpt, _, _ = lw_mode_velocity(λ, ρs, CDCMRip)
     return vcat(real(VSHpart), real(VSpart), real(VSHperpt), real(VSperpt)) ./ sqrt(sum(population_mean(globalDCMR)[1:2]) / ρs)
 end
-βDCMR = curve_fit(f2DCMR, λA, fittarget, 1 ./ fittarget .^ 2, [0.5], lower=[0.0])
+βDCMR = curve_fit(f2DCMR, λA, fittarget, 1 ./ fittarget .^ 2, [0.5], lower=[0.0], autodiff = AutoFiniteDiff(fdjtype = Val(:central)))
+βDCMRerror = fit_error(βDCMR, α)
 
-#%%
+# Fit DCGT model
 fDCGT(p) = sum((DCGT(lbd[st:end], p) ./ MP[st:end] .- 1) .^ 2)
 globalDCGT = minimize(fDCGT, [GTfit.param[1], GTfit.param[2], 10], 1e3, lower=[0.0, 0.0, 1.0], upper=[23e3, 23e3, 100])
+DCGTfit = curve_fit(DCGT, lbd[st:end], MP[st:end], 1 ./ MP[st:end].^2, population_mean(globalDCGT))
+DCGTerror = fit_error(DCGTfit, α)
+
 function f2DCGT(λ, p)
     CDCGTip = C_DCGT.(λ, λ .^ (-0.41), ρs, VL, population_mean(globalDCGT)[1], population_mean(globalDCGT)[2],
         population_mean(globalDCGT)[3], fip, τ, n, p[1])
     VSHpart, VSHperpt, VSpart, VSperpt, _, _ = lw_mode_velocity(λ, ρs, CDCGTip)
     return vcat(real(VSHpart), real(VSpart), real(VSHperpt), real(VSperpt)) ./ sqrt(sum(population_mean(globalDCGT)[1:2]) / ρs)
 end
-βDCGT = curve_fit(f2DCGT, λA, fittarget, 1 ./ fittarget .^ 2, [0.5], lower=[0.0])
+βDCGT = curve_fit(f2DCGT, λA, fittarget, 1 ./ fittarget .^ 2, [0.5], lower=[0.0], autodiff = AutoFiniteDiff(fdjtype = Val(:central)))
+βDCGTerror = fit_error(βDCGT, α)
 
 # %%
-# save(joinpath(@__DIR__, "fitparameters.jld2"),
-#     "MRfit", MRfit.param, "βMR", βMR.param,
-#     "GTfit", GTfit.param, "βGT", βGT.param,
-#     "Cfit", Cfit.param, "βC", βC.param,
-#     "MRSHfit", MRSHfit, "βMRSH", βMRSH.param,
-#     "GTSHfit", GTSHfit, "βGTSH", βGTSH.param,
-#     "CSHfit", CSHfit, "βCSH", βCSH.param,
-#     "GGfit", population_mean(globalGG), "βGG", βGG.param,
-#     "GMRfit", population_mean(globalGMR), "βGMR", βGMR.param,
-#     "DCMRfit", population_mean(globalDCMR), "βDCMR", βDCMR.param,
-#     "DCGTfit", population_mean(globalDCGT), "βDCGT", βDCGT.param)
+save(joinpath(@__DIR__, "fitparameters.jld2"),
+    "MRfit", MRfit.param, "βMR", βMR.param, "βMRerror", βMRerror,
+    "GTfit", GTfit.param, "βGT", βGT.param, "βGTerror", βGTerror,
+    "Cfit", Cfit.param, "βC", βC.param, "βCerror", βCerror,
+    "MRSHfit", MRSHfit, "βMRSH", βMRSH.param, "βMRSHerror", βMRSHerror,
+    "GTSHfit", GTSHfit, "βGTSH", βGTSH.param, "βGTSHerror", βGTSHerror,
+    "CSHfit", CSHfit, "βCSH", βCSH.param, "βCSHerror", βCSHerror,
+    "GGfit", population_mean(globalGG), "βGG", βGG.param, "βGGerror", βGGerror,
+    "GMRfit", population_mean(globalGMR), "βGMR", βGMR.param, "βGMRerror", βGMRerror,
+    "DCMRfit", population_mean(globalDCMR), "βDCMR", βDCMR.param, "βDCMRerror", βDCMRerror,
+    "DCGTfit", population_mean(globalDCGT), "βDCGT", βDCGT.param, "βDCGTerror", βDCGTerror)
