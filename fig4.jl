@@ -40,10 +40,12 @@ st = 2000
 # Mooney-Rivlin Fit with varying end point
 lbdmax = 1.25:0.01:2
 errMR = Vector{Float64}()
+errMR2 = Vector{Float64}()
 for l in lbdmax
     fit = curve_fit(MR, 1 ./ lbd[lbd.<l][st:end], MP[lbd.<l][st:end], 1 ./ MP[lbd.<l][st:end] .^ 2, [10e3, 1e3])
     # define error as in Destrade
     append!(errMR, maximum(abs.(MR(1 ./ lbd[1.2 .< lbd .< l], fit.param) ./ MP[1.2 .< lbd .< l] .- 1)))
+    append!(errMR2,maximum(abs.(fit.resid)))
 end
 # Gent-Thomas Fit
 errGT = Vector{Float64}()

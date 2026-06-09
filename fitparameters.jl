@@ -31,6 +31,8 @@ fittarget = vcat(VSHpar[λA.<λc], VSpar[λA.<λc], VSHperp[λA.<λc], VSperp[λ
 MRfit = curve_fit(MR, 1 ./ lbd[lbd.<λc][st:end], MP[lbd.<λc][st:end], 1 ./ MP[lbd.<λc][st:end] .^ 2, [10e3, 10e3])
 # Compute error on fit parameter with 90% confidence interval
 MRerror = fit_error(MRfit, α)
+# Goodness of fit metric
+MRgof = maximum(abs.(MRfit.resid)) * 100
 
 function fMR(λ, p)
     CMRip = C_MR.(λ, λ .^ (-0.41), ρs, VL, MRfit.param[1], MRfit.param[2], fip, τ, n, p[1])
@@ -44,6 +46,7 @@ end
 GTfit = curve_fit(GT, 1 ./ (2 * lbd[lbd.<λc][st:end] .^ 2 .+ 1 ./ lbd[lbd.<λc][st:end]),
     MP[lbd.<λc][st:end], 1 ./ MP[lbd.<λc][st:end] .^ 2, [10e3, 1e3])
 GTerror = fit_error(GTfit, α)
+GTgof = maximum(abs.(GTfit.resid)) * 100
 
 function fGT(λ, p)
     CGTip = C_GT.(λ, λ .^ (-0.41), ρs, VL, GTfit.param[1], GTfit.param[2], fip, τ, n, p[1])
@@ -56,6 +59,7 @@ end
 # Fit Carroll model
 Cfit = curve_fit(C, 1 ./ (lbd[lbd.<λc][st:end] .* sqrt.(2 * lbd[lbd.<λc][st:end] .+ 1 ./ lbd[lbd.<λc][st:end] .^ 2)), MP[lbd.<λc][st:end], 1 ./ MP[lbd.<λc][st:end] .^ 2, [10e3, 1e3])
 Cerror = fit_error(Cfit, α)
+Cgof = maximum(abs.(Cfit.resid)) * 100
 
 function fC(λ, p)
     CCip = C_C.(λ, λ .^ (-0.41), ρs, VL, Cfit.param[1], Cfit.param[2], fip, τ, n, p[1])
@@ -81,6 +85,7 @@ for i in eachindex(nrange)
 end
 MRSHfit = curve_fit(MRSH, lbd[lbd.<λc2][st:end], MP[lbd.<λc2][st:end], 1 ./ MP[lbd.<λc2][st:end] .^ 2, vcat(fitresults[argmin(error), :], nrange[argmin(error)]))
 MRSHerror = fit_error(MRSHfit, α)
+MRSHgof = maximum(abs.(MRSHfit.resid)) * 100
 
 function fMRSH(λ, p)
     CMRSHip = C_MRSH.(λ, λ .^ (-0.41), ρs, VL, MRSHfit.param[1], MRSHfit.param[2], MRSHfit.param[3], MRSHfit.param[4], fip, τ, n, p[1])
@@ -101,6 +106,7 @@ for i in eachindex(nrange)
 end
 GTSHfit = curve_fit(GTSH, lbd[lbd.<λc2][st:end], MP[lbd.<λc2][st:end], 1 ./ MP[lbd.<λc2][st:end] .^ 2, vcat(fitresults[argmin(error), :], nrange[argmin(error)]))
 GTSHerror = fit_error(GTSHfit, α)
+GTSHgof = maximum(abs.(GTSHfit.resid)) * 100
 
 function fGTSH(λ, p)
     CGTSHip = C_GTSH.(λ, λ .^ (-0.41), ρs, VL, GTSHfit.param[1], GTSHfit.param[2], GTSHfit.param[3], GTSHfit.param[4], fip, τ, n, p[1])
@@ -121,6 +127,7 @@ for i in eachindex(nrange)
 end
 CSHfit = curve_fit(CSH, lbd[lbd.<λc2][st:end], MP[lbd.<λc2][st:end], 1 ./ MP[lbd.<λc2][st:end] .^ 2, vcat(fitresults[argmin(error), :], nrange[argmin(error)]))
 CSHerror = fit_error(CSHfit, α)
+CSHgof = maximum(abs.(CSHfit.resid)) * 100
 
 function fCSH(λ, p)
     CCSHip = C_CSH.(λ, λ .^ (-0.41), ρs, VL, CSHfit.param[1], CSHfit.param[2], CSHfit.param[3], CSHfit.param[4], fip, τ, n, p[1])
@@ -138,6 +145,7 @@ fGMR(p) = sum((GMR(lbd[st:end], p) ./ MP[st:end] .- 1) .^ 2)
 globalGMR = minimize(fGMR, [MRfit.param[1], MRfit.param[2], 10], 1e3, lower=[0.0, 0.0, 1.0], upper=[23e3, 23e3, 100])
 GMRfit = curve_fit(GMR, lbd[st:end], MP[st:end], 1 ./ MP[st:end].^2, population_mean(globalGMR))
 GMRerror = fit_error(GMRfit, α)
+GMRgof = maximum(abs.(GMRfit.resid)) * 100
 
 function f2GMR(λ, p)
     CGMRip = C_GMR.(λ, λ .^ (-0.41), ρs, VL, population_mean(globalGMR)[1], population_mean(globalGMR)[2],
@@ -153,6 +161,7 @@ fGG(p) = sum((GG(lbd[st:end], p) ./ MP[st:end] .- 1) .^ 2)
 globalGG = minimize(fGG, [GTfit.param[1], GTfit.param[2], 10], 1e3, lower=[0.0, 0.0, 1.0], upper=[23e3, 23e3, 100])
 GGfit = curve_fit(GG, lbd[st:end], MP[st:end], 1 ./ MP[st:end].^2, population_mean(globalGG))
 GGerror = fit_error(GGfit, α)
+GGgof = maximum(abs.(GGfit.resid)) * 100
 
 function f2GG(λ, p)
     CGGip = C_GG.(λ, λ .^ (-0.41), ρs, VL, population_mean(globalGG)[1], population_mean(globalGG)[2],
@@ -168,6 +177,7 @@ fDCMR(p) = sum((DCMR(lbd[st:end], p) ./ MP[st:end] .- 1) .^ 2)
 globalDCMR = minimize(fDCMR, [MRfit.param[1], MRfit.param[2], 10], 1e3, lower=[0.0, 0.0, 1.0], upper=[23e3, 23e3, 100])
 DCMRfit = curve_fit(DCMR, lbd[st:end], MP[st:end], 1 ./ MP[st:end].^2, population_mean(globalDCMR))
 DCMRerror = fit_error(DCMRfit, α)
+DCMRgof = maximum(abs.(DCMRfit.resid)) * 100
 
 function f2DCMR(λ, p)
     CDCMRip = C_DCMR2.(λ, λ .^ (-0.41), ρs, VL, population_mean(globalDCMR)[1], population_mean(globalDCMR)[2],
@@ -183,7 +193,8 @@ fDCGT(p) = sum((DCGT(lbd[st:end], p) ./ MP[st:end] .- 1) .^ 2)
 globalDCGT = minimize(fDCGT, [GTfit.param[1], GTfit.param[2], 10], 1e3, lower=[0.0, 0.0, 1.0], upper=[23e3, 23e3, 100])
 DCGTfit = curve_fit(DCGT, lbd[st:end], MP[st:end], 1 ./ MP[st:end].^2, population_mean(globalDCGT))
 DCGTerror = fit_error(DCGTfit, α)
-
+DCGTgof = maximum(abs.(DCGTfit.resid)) * 100
+ 
 function f2DCGT(λ, p)
     CDCGTip = C_DCGT.(λ, λ .^ (-0.41), ρs, VL, population_mean(globalDCGT)[1], population_mean(globalDCGT)[2],
         population_mean(globalDCGT)[3], fip, τ, n, p[1])

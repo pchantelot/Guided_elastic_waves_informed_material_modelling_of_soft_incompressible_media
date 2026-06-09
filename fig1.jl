@@ -168,6 +168,10 @@ with_theme(My_theme) do
     lines!(ax4, -2 .+ x, 6 * ext / 2 .+ 0.5 .* cos.(5 * (x .- x[1])) .* exp.(-0.5 .* (x .- x[1])), color=:lime)
     arrows2d!(ax4, [-3.5], [-1.75], [3], [0], tipwidth=10, tiplength=12)
     text!(ax4, -3.7, -1.75, text="laser\nsheet", align=(:right, :center), lineheight=0.75)
+    # axis 
+    arrows2d!(ax4, [-7, -7], [6.5, 6.5], [2.5, 0], [0, 2.5], tipwidth=10, tiplength=12)
+    text!(ax4, -4.75, 6.75, text=L"\mathbf{e}_3", align=(:left, :top))
+    text!(ax4, -6.75, 8.5, text=L"\mathbf{e}_1", align=(:left, :bottom))
 
     rowgap!(fig.layout, 0)
     display(fig)
