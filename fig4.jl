@@ -36,7 +36,7 @@ lbd = vec(data["extension"] / 200 .+ 1)
 sig = vec(data["load"] / (40e-3 * 3e-3))
 # Mooney-plot
 MP = sig ./ (2 * (lbd .- lbd .^ (-2)))
-st = 2000
+st = 3500
 # Mooney-Rivlin Fit with varying end point
 lbdmax = 1.25:0.01:2
 errMR = Vector{Float64}()
@@ -51,14 +51,16 @@ end
 errGT = Vector{Float64}()
 for l in lbdmax
     fit = curve_fit(GT, 1 ./ (2 * lbd[lbd.<l][st:end] .^ 2 .+ 1 ./ lbd[lbd.<l][st:end]), MP[lbd.<l][st:end], 1 ./ MP[lbd.<l][st:end] .^ 2, [10e3, 1e3])
-    append!(errGT, maximum(abs.(GT(1 ./ (2 * lbd[1.2 .< lbd .< l] .^ 2 .+ 1 ./ lbd[1.2 .< lbd .< l]),
-        fit.param) ./ MP[1.2 .< lbd .< l] .- 1)))
+    # append!(errGT, maximum(abs.(GT(1 ./ (2 * lbd[1.2 .< lbd .< l] .^ 2 .+ 1 ./ lbd[1.2 .< lbd .< l]),
+    #     fit.param) ./ MP[1.2 .< lbd .< l] .- 1)))
+    append!(errGT,maximum(abs.(fit.resid)))
 end
 # Carroll Fit
 errC = Vector{Float64}()
 for l in lbdmax
     fit = curve_fit(C, 1 ./ (lbd[lbd.<l][st:end] .* sqrt.(2 * lbd[lbd.<l][st:end] .+ 1 ./ lbd[lbd.<l][st:end] .^ 2)), MP[lbd.<l][st:end], 1 ./ MP[lbd.<l][st:end] .^ 2, [10e3, 1e3])
-    append!(errC, maximum(abs.(C(1 ./ (lbd[1.2 .< lbd .< l] .* sqrt.(2 * lbd[1.2 .< lbd .< l] .+ 1 ./ lbd[1.2 .< lbd .< l] .^ 2)), fit.param) ./ MP[1.2 .< lbd .< l] .- 1)))
+    # append!(errC, maximum(abs.(C(1 ./ (lbd[1.2 .< lbd .< l] .* sqrt.(2 * lbd[1.2 .< lbd .< l] .+ 1 ./ lbd[1.2 .< lbd .< l] .^ 2)), fit.param) ./ MP[1.2 .< lbd .< l] .- 1)))
+    append!(errC,maximum(abs.(fit.resid)))
 end
 
 #%% Get velocity for the A0 perp mode which is not well described by a long-wavelength approximation
@@ -111,7 +113,7 @@ with_theme(My_theme, palette=(color=ColorSchemes.Set1_3, marker=[:circle])) do
     ax21.ylabel = L"$\mathcal{E}$ (%)"
     ax21.limits = (1.25, 1.7, 0, 1)
     band!(ax21, [λc, 3], [0, 0], [4, 4], color=tuple.(:grey, 0.2))
-    lines!(ax21, lbdmax, errMR * 100, label="Mooney-Rivlin")
+    lines!(ax21, lbdmax, errMR2 * 100, label="Mooney-Rivlin")
     lines!(ax21, lbdmax, errGT * 100, label="Gent-Thomas")
     lines!(ax21, lbdmax, errC * 100, label="Carroll")
     axislegend(ax21, position=:lt)

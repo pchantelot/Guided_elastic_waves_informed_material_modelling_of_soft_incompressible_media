@@ -12,7 +12,7 @@ lbd = vec(data["extension"] / 200 .+ 1)
 sig = vec(data["load"] / (40e-3 * 3e-3))
 # Mooney-plot
 MP = sig ./ (2 * (lbd .- lbd .^ (-2)))
-st = 2000
+st = 3500
 
 #%% Load dynamic experiment data to determine β' (only using in-plane modes)
 data = load(joinpath(@__DIR__, "parameters.jld2"))
